@@ -4,7 +4,7 @@ from random import randint
 import time
 import os
 
-# set up multiple user agents to prevent being blocked due to frequent calls
+# Set up multiple user agents to prevent being blocked due to frequent calls
 USER_AGENTS = [
     "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; AcooBrowser; .NET CLR 1.1.4322; .NET CLR 2.0.50727)",
     "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0; Acoo Browser; SLCC1; .NET CLR 2.0.50727; Media Center PC 5.0; .NET CLR 3.0.04506)",
@@ -25,10 +25,16 @@ USER_AGENTS = [
     ]
 
 
+# Even though the API documentation says that the maximum number of rows per download is 100,000,
+# somehow only 10,000 rows can be downloaded each time.
+# Also, the connection is unstable because I'm using a guest account.
+# I choose to download the data by country and by year and store in csv files
+# in case the connection breaks, I can pick up the download where I've left off
+# instead of having to start over.
+# url: download url
+# path: local save path
+# header: set user agent
 def download_url(url, path, header):
-    # url: download url
-    # path: local save path
-    # header: set user agent
     content = urllib.request.Request(url, headers=header)
     with urllib.request.urlopen(content) as file:
         with open(path, 'wb') as outfile:
@@ -39,7 +45,7 @@ def main():
     random_agent = USER_AGENTS[randint(0, len(USER_AGENTS)-1)]
     header = {'User-Agent': random_agent}
 
-    # get country name corresponding to country code
+    # Get country name to country code mapping
     if not os.path.exists("./reporterAreas.json"):
         download_url("https://comtrade.un.org/Data/cache/reporterAreas.json", "./reporterAreas.json", header)
     with open('reporterAreas.json', 'r', encoding='utf_8_sig') as f:
@@ -52,15 +58,16 @@ def main():
         text.append(i.get("text"))
         new_id = id[1:]
         new_text = text[1:]
-    start_year = 2017
+    # If download is interrupted, change these variables to pick where we left off
+    start_year = 2003
     stop_year = 2019
     begin_id = 0  # number of docs downloaded in current year
 
-    # create folder to store downloaded data
+    # Create folder to store downloaded data
     if not os.path.exists("./data"):
         os.makedirs("./data")
     for year in range(start_year, stop_year + 1):
-        # store data by year
+        # Create folder to store data by year
         if not os.path.exists("./data/" + str(year)):
             os.makedirs("./data/" + str(year))
 
@@ -68,7 +75,7 @@ def main():
             random_agent = USER_AGENTS[randint(0, len(USER_AGENTS)-1)]
             print(random_agent)
             header = {'User-Agent': random_agent}
-            # parameters documented on https://comtrade.un.org/data/doc/api
+            # Parameters documented on https://comtrade.un.org/data/doc/api
             url = "http://comtrade.un.org/api/get?max=100000&r=" + str(new_id[i]) + "&freq=A&ps=" + str(year) + "&px=S3&rg=2&cc=AG1&fmt=csv&type=C"
             path = "./data/" + str(year) + "/" + new_text[i] + ".csv"
             print("Downloading from " + url + " to " + path)
